@@ -35,10 +35,21 @@ class NotesViewController: UITableViewController {
         view.backgroundColor = .systemBackground
         title = "Notes"
         
-        navigationItem.rightBarButtonItems = [
+        var rightBarButtonItems = [
             UIBarButtonItem(barButtonSystemItem: .add, target: self, action: #selector(goToNoteEditorWithoutNote)),
             UIBarButtonItem(barButtonSystemItem: .organize, target: self, action: #selector(showCreateFolderSheet)),
         ]
+        
+        if relativeFolder != nil {
+            rightBarButtonItems.append(
+                UIBarButtonItem(barButtonSystemItem: .trash, target: self, action: #selector(deleteFolder))
+            )
+        }
+    
+        navigationItem.rightBarButtonItems = rightBarButtonItems
+        
+        let longPress = UILongPressGestureRecognizer(target: self, action: #selector(showRenameFolderSheet))
+        tableView.addGestureRecognizer(longPress)
     }
     
     override func viewWillAppear(_ animated: Bool) {
@@ -70,6 +81,20 @@ class NotesViewController: UITableViewController {
             .sorted { ($0.name ?? "") < ($1.name ?? "") }
     }
     
+    @objc private func deleteFolder() {
+        let database = NotesAppDatabase.shared
+        guard let folderObjectiveID = relativeFolder?.objectID else { return }
+        
+        database.persistentContainer.performBackgroundTask { context in
+            let object = try? context.existingObject(with: folderObjectiveID)
+            if let object {
+                context.delete(object)
+                try? context.save()
+            }
+        }
+        navigationController?.popViewController(animated: true)
+    }
+    
     private func goToNoteEditor(with note: Note?) {
         let vc = NoteEditorViewController(note: note, relativeFolderID: relativeFolder?.objectID)
         navigationController?.pushViewController(vc, animated: true)
@@ -95,12 +120,48 @@ class NotesViewController: UITableViewController {
                 let folder = Folder(entity: Folder.entity(), insertInto: context)
                 folder.name = folderName
                 try? context.save()
+                DispatchQueue.main.async { self.fetchNotesAndFolders() }
             }
         }))
         
         present(alert, animated: true)
     }
     
+    @objc private func showRenameFolderSheet(_ gesture: UILongPressGestureRecognizer) {
+        guard gesture.state == .began else { return }
+
+        let location = gesture.location(in: tableView)
+        guard let indexPath = tableView.indexPathForRow(at: location) else { return }
+
+        guard let folder = notesAndFolders[indexPath.row] as? Folder else { return }
+        
+        let alert = UIAlertController(title: "Rename Folder",
+                                      message: "Enter a new name for your folder",
+                                      preferredStyle: .alert)
+        
+        alert.addTextField { textField in
+            textField.placeholder = "Folder name"
+            textField.text = folder.name
+        }
+        
+        alert.addAction(UIAlertAction(title: "Cancel", style: .cancel))
+        alert.addAction(UIAlertAction(title: "Rename", style: .default, handler: { _ in
+            guard let folderName = alert.textFields?.first?.text else { return }
+            
+            let database = NotesAppDatabase.shared
+            database.persistentContainer.performBackgroundTask { context in
+                guard let folder = try? context.existingObject(with: folder.objectID) as? Folder else { return }
+                folder.name = folderName
+                try? context.save()
+                DispatchQueue.main.async { self.fetchNotesAndFolders() }
+            }
+        }))
+        
+        present(alert, animated: true)
+    }
+}
+
+extension NotesViewController {
     override func tableView(_ tableView: UITableView, numberOfRowsInSection section: Int) -> Int {
         notesAndFolders.count
     }
@@ -142,6 +203,4 @@ class NotesViewController: UITableViewController {
             navigationController?.pushViewController(vc, animated: true)
         }
     }
-    
 }
-
