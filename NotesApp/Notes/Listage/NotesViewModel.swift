@@ -16,8 +16,10 @@ final class NotesViewModel: NSObject, NSFetchedResultsControllerDelegate {
 
     var notesAndFoldersPublisher: AnyPublisher<[Listable], Never> {
         Publishers.CombineLatest($folders, $notes)
+            .debounce(for: .milliseconds(50), scheduler: DispatchQueue.main)
             .map { folders, notes -> [Listable] in
-                (folders + notes).sorted { $0.name ?? "" < $1.name ?? "" }
+                print("NotesViewModel with relativeFolder=\(String(describing: self.relativeFolder?.name)) updating data")
+                return (folders + notes).sorted { $0.name ?? "" < $1.name ?? "" }
             }.eraseToAnyPublisher()
     }
 

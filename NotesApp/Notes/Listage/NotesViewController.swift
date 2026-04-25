@@ -48,19 +48,26 @@ class NotesViewController: UITableViewController {
         
         let longPress = UILongPressGestureRecognizer(target: self, action: #selector(showRenameFolderSheet))
         tableView.addGestureRecognizer(longPress)
-        
-        viewModel.notesAndFoldersPublisher
-            .receive(on: DispatchQueue.main)
-            .sink { [weak self] items in
-                self?.snapshot = items
-                self?.tableView.reloadData()
-            }
-            .store(in: &cancellables)
     }
     
     override func viewWillAppear(_ animated: Bool) {
         super.viewWillAppear(animated)
+        
+        viewModel.notesAndFoldersPublisher
+            .receive(on: DispatchQueue.main)
+            .sink { [weak self] list in
+                guard let self else { return }
+                self.snapshot = list
+                self.tableView.reloadData()
+            }
+            .store(in: &cancellables)
+        
         viewModel.fetchNotesAndFolders()
+    }
+    
+    override func viewWillDisappear(_ animated: Bool) {
+        super.viewWillDisappear(animated)
+        cancellables.removeAll()
     }
     
     private func goToNoteEditor(with note: Note?) {
