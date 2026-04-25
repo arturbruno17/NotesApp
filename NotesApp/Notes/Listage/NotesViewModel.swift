@@ -4,56 +4,75 @@ import Combine
 
 
 /// ViewModel for NotesViewController implementing business logic in MVVM pattern.
-final class NotesViewModel {
+final class NotesViewModel: NSObject, NSFetchedResultsControllerDelegate {
+    
     let relativeFolder: Folder?
-
     private let database: NotesAppDatabase
+    private let notesFRC: NSFetchedResultsController<Note>
+    private let foldersFRC: NSFetchedResultsController<Folder>
 
-    @Published private var notesAndFolders: [Listable] = []
+    @Published private var notes: [Note] = []
+    @Published private var folders: [Folder] = []
+
     var notesAndFoldersPublisher: AnyPublisher<[Listable], Never> {
-        return $notesAndFolders.eraseToAnyPublisher()
+        Publishers.CombineLatest($folders, $notes)
+            .map { folders, notes -> [Listable] in
+                (folders + notes).sorted { $0.name ?? "" < $1.name ?? "" }
+            }.eraseToAnyPublisher()
     }
 
     /// Initializes the view model.
     /// - Parameters:
-    ///   - database: The database instance to interact with Core Data.
+    ///   - database: The database instance to interact with `CoreData`.
     ///   - relativeFolder: The folder relative to which notes and folders are fetched.
     init(database: NotesAppDatabase, relativeFolder: Folder? = nil) {
         self.database = database
         self.relativeFolder = relativeFolder
+        
+        // Notes fetch request
+        let noteRequest: NSFetchRequest<Note> = Note.fetchRequest()
+        noteRequest.sortDescriptors = [NSSortDescriptor(keyPath: \Note.title, ascending: true)]
+
+        // Folders fetch request
+        let folderRequest: NSFetchRequest<Folder> = Folder.fetchRequest()
+        folderRequest.sortDescriptors = [NSSortDescriptor(keyPath: \Folder.name, ascending: true)]
+        
+        // Predicates
+        if let relativeFolder = self.relativeFolder {
+            noteRequest.predicate = NSPredicate(format: "folder == %@", relativeFolder)
+            folderRequest.predicate = NSPredicate(format: "parentFolder == %@", relativeFolder)
+        } else {
+            noteRequest.predicate = NSPredicate(format: "folder == nil")
+            folderRequest.predicate = NSPredicate(format: "parentFolder == nil")
+        }
+
+        self.notesFRC = NSFetchedResultsController(
+            fetchRequest: noteRequest,
+            managedObjectContext: database.context,
+            sectionNameKeyPath: nil,
+            cacheName: nil)
+        self.foldersFRC = NSFetchedResultsController(
+            fetchRequest: folderRequest,
+            managedObjectContext: database.context,
+            sectionNameKeyPath: nil,
+            cacheName: nil)
+
+        super.init()
+        
+        notesFRC.delegate = self
+        foldersFRC.delegate = self
     }
 
     func fetchNotesAndFolders() {
-        let context = database.context
-
-        context.perform {
-            var results: [Listable] = []
-
-            let noteRequest: NSFetchRequest<Note> = Note.fetchRequest()
-            let folderRequest: NSFetchRequest<Folder> = Folder.fetchRequest()
-
-            if let relativeFolder = self.relativeFolder {
-                noteRequest.predicate = NSPredicate(format: "folder == %@", relativeFolder)
-                folderRequest.predicate = NSPredicate(format: "parentFolder == %@", relativeFolder)
-            } else {
-                noteRequest.predicate = NSPredicate(format: "folder == nil")
-                folderRequest.predicate = NSPredicate(format: "parentFolder == nil")
-            }
-
-            noteRequest.sortDescriptors = [NSSortDescriptor(keyPath: \Note.title, ascending: true)]
-            folderRequest.sortDescriptors = [NSSortDescriptor(keyPath: \Folder.name, ascending: true)]
-
-            do {
-                let notes = try context.fetch(noteRequest)
-                let folders = try context.fetch(folderRequest)
-                results.append(contentsOf: folders)
-                results.append(contentsOf: notes)
-            } catch {
-                // Silently ignore fetch errors and emit empty array
-                results = []
-            }
-
-            DispatchQueue.main.async { self.notesAndFolders = results }
+        do {
+            try notesFRC.performFetch()
+            try foldersFRC.performFetch()
+            self.notes = notesFRC.fetchedObjects ?? []
+            self.folders = foldersFRC.fetchedObjects ?? []
+        } catch {
+            // On failure, clear arrays and merged list
+            self.notes = []
+            self.folders = []
         }
     }
 
@@ -94,8 +113,6 @@ final class NotesViewModel {
             } catch {
                 // Ignore save errors
             }
-
-            DispatchQueue.main.async { self.fetchNotesAndFolders() }
         }
     }
 
@@ -110,7 +127,14 @@ final class NotesViewModel {
             } catch {
                 // Ignore errors
             }
-            DispatchQueue.main.async { self.fetchNotesAndFolders() }
+        }
+    }
+
+    func controllerDidChangeContent(_ controller: NSFetchedResultsController<NSFetchRequestResult>) {
+        if controller === notesFRC {
+            self.notes = notesFRC.fetchedObjects ?? []
+        } else if controller === foldersFRC {
+            self.folders = foldersFRC.fetchedObjects ?? []
         }
     }
 }
