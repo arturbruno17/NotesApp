@@ -119,6 +119,9 @@ class NotesViewController: UITableViewController {
             database.persistentContainer.performBackgroundTask { context in
                 let folder = Folder(entity: Folder.entity(), insertInto: context)
                 folder.name = folderName
+                if let objectID = self.relativeFolder?.objectID, let object = try? context.existingObject(with: objectID) as? Folder {
+                    folder.parentFolder = object
+                }
                 try? context.save()
                 DispatchQueue.main.async { self.fetchNotesAndFolders() }
             }
