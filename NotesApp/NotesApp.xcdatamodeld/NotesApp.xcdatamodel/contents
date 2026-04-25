@@ -1,4 +1,14 @@
 <?xml version="1.0" encoding="UTF-8" standalone="yes"?>
-<model type="com.apple.IDECoreDataModeler.DataModel" documentVersion="1.0" lastSavedToolsVersion="1" systemVersion="11A491" minimumToolsVersion="Automatic" sourceLanguage="Swift" usedWithCloudKit="false" userDefinedModelVersionIdentifier="">
-    <elements/>
+<model type="com.apple.IDECoreDataModeler.DataModel" documentVersion="1.0" lastSavedToolsVersion="24512" systemVersion="25C56" minimumToolsVersion="Automatic" sourceLanguage="Swift" usedWithSwiftData="YES" userDefinedModelVersionIdentifier="">
+    <entity name="Folder" representedClassName="Folder" syncable="YES" codeGenerationType="category">
+        <attribute name="name" attributeType="String"/>
+        <relationship name="folders" optional="YES" toMany="YES" deletionRule="Cascade" destinationEntity="Folder" inverseName="parentFolder" inverseEntity="Folder"/>
+        <relationship name="notes" optional="YES" toMany="YES" deletionRule="Cascade" destinationEntity="Note" inverseName="folder" inverseEntity="Note"/>
+        <relationship name="parentFolder" optional="YES" maxCount="1" deletionRule="Nullify" destinationEntity="Folder" inverseName="folders" inverseEntity="Folder"/>
+    </entity>
+    <entity name="Note" representedClassName="Note" syncable="YES" codeGenerationType="category">
+        <attribute name="nDescription" optional="YES" attributeType="String" defaultValueString=""/>
+        <attribute name="title" optional="YES" attributeType="String" defaultValueString=""/>
+        <relationship name="folder" optional="YES" maxCount="1" deletionRule="No Action" destinationEntity="Folder" inverseName="notes" inverseEntity="Folder"/>
+    </entity>
 </model>

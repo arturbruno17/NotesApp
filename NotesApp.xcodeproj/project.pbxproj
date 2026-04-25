@@ -15,16 +15,28 @@
 			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
 			membershipExceptions = (
 				Info.plist,
+				NotesApp.xcdatamodeld,
 			);
 			target = 5F2E27122F99BC6C00CEE614 /* NotesApp */;
 		};
 /* End PBXFileSystemSynchronizedBuildFileExceptionSet section */
+
+/* Begin PBXFileSystemSynchronizedGroupBuildPhaseMembershipExceptionSet section */
+		5F99F18C2F9B03BF00DD498F /* Exceptions for "NotesApp" folder in "Copy Bundle Resources" phase from "NotesApp" target */ = {
+			isa = PBXFileSystemSynchronizedGroupBuildPhaseMembershipExceptionSet;
+			buildPhase = 5F2E27112F99BC6C00CEE614 /* Resources */;
+			membershipExceptions = (
+				NotesApp.xcdatamodeld,
+			);
+		};
+/* End PBXFileSystemSynchronizedGroupBuildPhaseMembershipExceptionSet section */
 
 /* Begin PBXFileSystemSynchronizedRootGroup section */
 		5F2E27152F99BC6C00CEE614 /* NotesApp */ = {
 			isa = PBXFileSystemSynchronizedRootGroup;
 			exceptions = (
 				5F2E27282F99BC6D00CEE614 /* Exceptions for "NotesApp" folder in "NotesApp" target */,
+				5F99F18C2F9B03BF00DD498F /* Exceptions for "NotesApp" folder in "Copy Bundle Resources" phase from "NotesApp" target */,
 			);
 			path = NotesApp;
 			sourceTree = "<group>";
@@ -149,7 +161,6 @@
 				INFOPLIST_FILE = NotesApp/Info.plist;
 				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
 				INFOPLIST_KEY_UILaunchStoryboardName = LaunchScreen;
-				INFOPLIST_KEY_UIMainStoryboardFile = Main;
 				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPad = "UIInterfaceOrientationPortrait UIInterfaceOrientationPortraitUpsideDown UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
 				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPhone = "UIInterfaceOrientationPortrait UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
 				LD_RUNPATH_SEARCH_PATHS = (
@@ -180,7 +191,6 @@
 				INFOPLIST_FILE = NotesApp/Info.plist;
 				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
 				INFOPLIST_KEY_UILaunchStoryboardName = LaunchScreen;
-				INFOPLIST_KEY_UIMainStoryboardFile = Main;
 				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPad = "UIInterfaceOrientationPortrait UIInterfaceOrientationPortraitUpsideDown UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
 				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPhone = "UIInterfaceOrientationPortrait UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
 				LD_RUNPATH_SEARCH_PATHS = (
