@@ -8,12 +8,15 @@
 import Foundation
 import UIKit
 import CoreData
+import Combine
 
-class NoteEditorViewController : UIViewController {
-    
-    let note: Note?
-    let relativeFolderID: NSManagedObjectID?
-    
+final class NoteEditorViewController: UIViewController, UITextViewDelegate {
+
+    // MARK: - Dependencies
+    private let viewModel: NoteEditorViewModel
+    private var cancellables = Set<AnyCancellable>()
+
+    // MARK: - UI
     let titleTextField: UITextField = {
         let textField = UITextField()
         textField.translatesAutoresizingMaskIntoConstraints = false
@@ -21,7 +24,7 @@ class NoteEditorViewController : UIViewController {
         textField.font = .systemFont(ofSize: 24, weight: .bold)
         return textField
     }()
-    
+
     let descriptionTextView: UITextView = {
         let textView = UITextView()
         textView.translatesAutoresizingMaskIntoConstraints = false
@@ -30,27 +33,25 @@ class NoteEditorViewController : UIViewController {
         textView.font = .systemFont(ofSize: 18)
         return textView
     }()
-    
-    init(note: Note? = nil, relativeFolderID: NSManagedObjectID? = nil) {
-        self.note = note
-        self.relativeFolderID = relativeFolderID
 
+    // MARK: - Init
+    init(viewModel: NoteEditorViewModel) {
+        self.viewModel = viewModel
         super.init(nibName: nil, bundle: nil)
-        
-        titleTextField.text = note?.title
-        descriptionTextView.text = note?.nDescription
     }
-    
+
     required init?(coder: NSCoder) {
         fatalError("init(coder:) has not been implemented")
     }
-    
+
+    // MARK: - Lifecycle
     override func viewDidLoad() {
         super.viewDidLoad()
-        
-        title = self.note == nil ? "New note" : "Editing note"
-        
-        if self.note != nil {
+
+        view.backgroundColor = .systemBackground
+        title = viewModel.isEditingExistingNote ? "Editing note" : "New note"
+
+        if viewModel.isEditingExistingNote {
             navigationItem.rightBarButtonItems = [
                 .init(barButtonSystemItem: .done, target: self, action: #selector(createOrEditNote)),
                 .init(barButtonSystemItem: .trash, target: self, action: #selector(deleteNote))
@@ -60,16 +61,28 @@ class NoteEditorViewController : UIViewController {
                 .init(barButtonSystemItem: .done, target: self, action: #selector(createOrEditNote))
             ]
         }
-        
+
         setupViews()
         setupConstraints()
+        bindViewModel()
+
+        // Seed UI with initial values
+        titleTextField.text = viewModel.title
+        descriptionTextView.text = viewModel.body
     }
-    
+
+    // MARK: - Bindings
+    private func bindViewModel() {
+        titleTextField.addTarget(self, action: #selector(titleChanged), for: .editingChanged)
+        descriptionTextView.delegate = self
+    }
+
+    // MARK: - Setup UI
     private func setupViews() {
         view.addSubview(titleTextField)
         view.addSubview(descriptionTextView)
     }
-    
+
     private func setupConstraints() {
         NSLayoutConstraint.activate([
             titleTextField.leadingAnchor.constraint(equalTo: view.layoutMarginsGuide.leadingAnchor),
@@ -84,41 +97,29 @@ class NoteEditorViewController : UIViewController {
             descriptionTextView.bottomAnchor.constraint(equalTo: view.safeAreaLayoutGuide.bottomAnchor)
         ])
     }
+
+    // MARK: - Actions
+    @objc private func titleChanged() {
+        viewModel.title = titleTextField.text ?? ""
+    }
     
+    func textViewDidChange(_ textView: UITextView) {
+        viewModel.body = textView.text
+    }
+
     @objc private func createOrEditNote() {
-        guard let title = titleTextField.text, !title.isEmpty else { return }
-        guard let description = descriptionTextView.text, !description.isEmpty else { return }
-        
-        let database = NotesAppDatabase.shared
-        database.persistentContainer.performBackgroundTask { context in
-            let note = self.note ?? Note(entity: Note.entity(), insertInto: context)
-            note.title = title
-            note.nDescription = description
-            if let relativeFolderID = self.relativeFolderID {
-                note.folder = try? context.existingObject(with: relativeFolderID) as? Folder
-            }
-            do {
-                try context.save()
-            } catch {
-                print(error.localizedDescription)
-            }
+        viewModel.title = titleTextField.text ?? ""
+        viewModel.body = descriptionTextView.text ?? ""
+        guard viewModel.validateInputs() else { return }
+
+        viewModel.saveNote {
+            self.navigationController?.popViewController(animated: true)
         }
-        navigationController?.popViewController(animated: true)
     }
-    
+
     @objc private func deleteNote() {
-        guard let note = self.note else { return }
-        
-        let database = NotesAppDatabase.shared
-        database.persistentContainer.performBackgroundTask { _ in
-            database.context.delete(note)
-            do {
-                try database.context.save()
-            } catch {
-                print(error.localizedDescription)
-            }
+        viewModel.deleteNote {
+            self.navigationController?.popViewController(animated: true)
         }
-        navigationController?.popViewController(animated: true)
     }
-    
 }

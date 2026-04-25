@@ -71,7 +71,13 @@ class NotesViewController: UITableViewController {
     }
     
     private func goToNoteEditor(with note: Note?) {
-        let vc = NoteEditorViewController(note: note, relativeFolderID: viewModel.relativeFolder?.objectID)
+        let vc = NoteEditorViewController(
+            viewModel: NoteEditorViewModel(
+                database: NotesAppDatabase.shared,
+                note: note,
+                relativeFolderID: viewModel.relativeFolder?.objectID
+            )
+        )
         navigationController?.pushViewController(vc, animated: true)
     }
     
